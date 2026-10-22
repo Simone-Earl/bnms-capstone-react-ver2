@@ -10,6 +10,7 @@ import Settings from './pages/Settings';
 import AdminPanel from './pages/AdminPanel'; // 🔥 NEW IMPORT
 import WeighInEntry from './pages/WeighInEntry';
 import GrowthCharts from './pages/GrowthCharts';
+import Referrals from './pages/Referrals';
 
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
@@ -42,7 +43,7 @@ function App() {
           
           <Route path="/weigh-in" element={<ProtectedRoute><WeighInEntry /></ProtectedRoute>} />
           <Route path="/growth-charts" element={<ProtectedRoute><GrowthCharts /></ProtectedRoute>} />
-          <Route path="/referrals" element={<ProtectedRoute><div className="p-8">Referrals Page</div></ProtectedRoute>} />
+          <Route path="/referrals" element={<ProtectedRoute><Referrals /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><div className="p-8">Reports Page</div></ProtectedRoute>} />
         </Routes>
       </Router>

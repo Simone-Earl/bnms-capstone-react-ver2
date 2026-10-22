@@ -1,6 +1,6 @@
 // src/pages/Dashboard.jsx
 import { useState, useEffect } from 'react';
-import { collection, query, orderBy, limit, onSnapshot, doc, where, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, where, getDocs, writeBatch } from 'firebase/firestore';
 import { db } from '../config/firebase'; 
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { Doughnut } from 'react-chartjs-2';
@@ -27,6 +27,7 @@ export default function Dashboard() {
   const toggleSidebar = () => setIsSidebarOpen(!isSidebarOpen);
   const toggleModal = () => setIsModalOpen(!isModalOpen);
 
+  // 1. Fetch Summary Stats (Automatically deduplicated because it queries unique child profiles)
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "children"), (snapshot) => {
       let normal = 0, stunted = 0, wasted = 0, overweight = 0, flagged = 0, unassessed = 0;
@@ -45,16 +46,42 @@ export default function Dashboard() {
     return () => unsubscribe();
   }, []);
 
+  // 🔥 2. DEDUPLICATED REAL-TIME RECORDS FETCH
   useEffect(() => {
-    const q = query(collection(db, "anthropometric_records"), orderBy("created_at", "desc"), limit(10));
+    // We remove the limit(10) here so we can fetch enough records to find the unique ones
+    const q = query(collection(db, "anthropometric_records"), orderBy("created_at", "desc"));
+    
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const recordsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setRecords(recordsData);
+      const allRecords = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Ensure strict sorting by date (newest first)
+      allRecords.sort((a, b) => {
+        const dateA = a.visit_date ? new Date(a.visit_date) : (a.created_at?.toDate ? a.created_at.toDate() : new Date(0));
+        const dateB = b.visit_date ? new Date(b.visit_date) : (b.created_at?.toDate ? b.created_at.toDate() : new Date(0));
+        return dateB - dateA; // Descending order
+      });
+
+      // The Magic Filter: Keep only the FIRST (newest) record per child
+      const uniqueChildrenMap = new Map();
+      
+      allRecords.forEach(record => {
+        // Because the array is sorted newest-first, the first time we see a child's ID, 
+        // it is guaranteed to be their absolute latest record.
+        if (!uniqueChildrenMap.has(record.child_id)) {
+          uniqueChildrenMap.set(record.child_id, record);
+        }
+      });
+
+      // Convert Map back to array and take only the top 10 unique recent records for the dashboard UI
+      const latestUniqueRecords = Array.from(uniqueChildrenMap.values()).slice(0, 10);
+      
+      setRecords(latestUniqueRecords);
       setLoadingRecords(false);
     }, (error) => {
       console.error("Error fetching records: ", error);
       setLoadingRecords(false);
     });
+    
     return () => unsubscribe();
   }, []);
 
@@ -109,7 +136,6 @@ export default function Dashboard() {
     return ((value / childStats.total) * 100).toFixed(1);
   };
 
-  // 🔥 NEW: Human-readable age formatter
   const formatAge = (months) => {
     if (months === undefined || months === null || isNaN(months)) return '-';
     if (months < 12) return `${months} mo (Infant)`;
@@ -200,7 +226,6 @@ export default function Dashboard() {
                   <thead>
                     <tr className="bg-cream text-muted text-xs uppercase tracking-wider border-b border-line">
                       <th className="px-5 py-3 font-semibold">Child Name</th>
-                      {/* Changed Table Header */}
                       <th className="px-5 py-3 font-semibold text-center">Age</th>
                       <th className="px-5 py-3 font-semibold text-center">Ht (cm)</th>
                       <th className="px-5 py-3 font-semibold text-center">Wt (kg)</th>
@@ -216,7 +241,6 @@ export default function Dashboard() {
                       records.map((record) => (
                         <tr key={record.id} className="hover:bg-cream transition">
                           <td className="px-5 py-4 font-medium">{record.child_name || 'Unknown'}</td>
-                          {/* Applied Formatter */}
                           <td className="px-5 py-4 text-center whitespace-nowrap">{formatAge(record.age_mo)}</td>
                           <td className="px-5 py-4 text-center">{record.height_cm ? record.height_cm.toFixed(1) : '-'}</td>
                           <td className="px-5 py-4 text-center">{record.weight_kg ? record.weight_kg.toFixed(1) : '-'}</td>
