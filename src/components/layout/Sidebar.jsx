@@ -1,7 +1,11 @@
 // src/components/layout/Sidebar.jsx
 import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 
 export default function Sidebar({ isOpen }) {
+  const { userProfile } = useAuth();
+  const isWorker = userProfile?.role === 'worker';
+
   return (
     <aside 
       className={`bg-maroon w-64 h-full border-r border-maroon_dark flex flex-col transition-transform duration-300 ease-in-out transform fixed lg:static z-40 ${
@@ -95,6 +99,24 @@ export default function Sidebar({ isOpen }) {
               )}
             </NavLink>
           </li>
+
+          {/* 🔥 NEW: Admin Panel Link (Only visible to workers) */}
+          {isWorker && (
+            <li>
+              <NavLink 
+                to="/admin" 
+                className={({ isActive }) => `flex items-center px-3 py-2.5 rounded-lg font-medium transition-colors group border-l-4 ${isActive ? 'bg-maroon_light text-paper border-gold' : 'text-paper/80 hover:bg-maroon_dark hover:text-paper border-transparent'}`}
+              >
+                {({ isActive }) => (
+                  <>
+                    <i className={`fa-solid fa-shield-halved w-6 text-center mr-2 ${isActive ? '' : 'text-paper/60 group-hover:text-paper'}`}></i>
+                    Admin Panel
+                  </>
+                )}
+              </NavLink>
+            </li>
+          )}
+
         </ul>
       </nav>
       

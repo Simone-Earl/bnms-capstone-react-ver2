@@ -5,15 +5,18 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import AuthPage from './pages/AuthPage';
 import Dashboard from './pages/Dashboard';
 import ChildrenProfiles from './pages/ChildrenProfiles';
+import UserProfile from './pages/UserProfile';
+import Settings from './pages/Settings';
+import AdminPanel from './pages/AdminPanel'; // 🔥 NEW IMPORT
+import WeighInEntry from './pages/WeighInEntry';
+import GrowthCharts from './pages/GrowthCharts';
 
-// Route Guard: Prevents access to URLs without logging in
 const ProtectedRoute = ({ children }) => {
   const { currentUser } = useAuth();
   if (!currentUser) return <Navigate to="/login" replace />;
   return children;
 };
 
-// Route Guard: Prevents logged-in users from seeing the login page
 const PublicRoute = ({ children }) => {
   const { currentUser } = useAuth();
   if (currentUser) return <Navigate to="/dashboard" replace />;
@@ -31,9 +34,14 @@ function App() {
           
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/profiles" element={<ProtectedRoute><ChildrenProfiles /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><UserProfile /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
           
-          <Route path="/weigh-in" element={<ProtectedRoute><div className="p-8">Weigh-in Page</div></ProtectedRoute>} />
-          <Route path="/growth-charts" element={<ProtectedRoute><div className="p-8">Growth Charts Page</div></ProtectedRoute>} />
+          {/* 🔥 NEW ADMIN ROUTE */}
+          <Route path="/admin" element={<ProtectedRoute><AdminPanel /></ProtectedRoute>} />
+          
+          <Route path="/weigh-in" element={<ProtectedRoute><WeighInEntry /></ProtectedRoute>} />
+          <Route path="/growth-charts" element={<ProtectedRoute><GrowthCharts /></ProtectedRoute>} />
           <Route path="/referrals" element={<ProtectedRoute><div className="p-8">Referrals Page</div></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><div className="p-8">Reports Page</div></ProtectedRoute>} />
         </Routes>
